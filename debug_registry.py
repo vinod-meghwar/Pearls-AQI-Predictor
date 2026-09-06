@@ -38,3 +38,4 @@ Path('registry_status.txt').write_text('\n'.join([
     'PASS_LEN=' + str(len(os.environ['MLFLOW_TRACKING_PASSWORD'])),
     'REG_COUNT=' + str(len(list(client.search_registered_models()))) if 'client' in globals() else 'REG_COUNT=unknown',
 ]) + '\n', encoding='utf-8')
+
