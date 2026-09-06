@@ -45,3 +45,4 @@ except Exception as e:
     print("2. Authentication credentials are invalid")
     print("3. The model doesn't exist in the registry")
     print("4. Network connectivity issue")
+
