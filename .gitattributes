@@ -6,3 +6,4 @@
 models/*.pkl filter=lfs diff=lfs merge=lfs -text
 models/** filter=lfs diff=lfs merge=lfs -text
 models/aqi_multi_output_model.pkl filter=lfs diff=lfs merge=lfs -text
+
