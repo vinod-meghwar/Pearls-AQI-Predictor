@@ -15,3 +15,4 @@ try:
     print(f"✓ raw_data collection has {count} documents")
 except Exception as e:
     print(f"✗ MongoDB connection failed: {e}")
+
