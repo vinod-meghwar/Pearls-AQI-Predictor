@@ -43,3 +43,4 @@ if __name__ == "__main__":
     parser.add_argument("pipeline", choices=sorted(PIPELINES.keys()), help="Pipeline name")
     args = parser.parse_args()
     run_pipeline(args.pipeline)
+
