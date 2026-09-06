@@ -1,0 +1,14 @@
+pandas
+numpy
+scikit-learn
+xgboost
+lightgbm
+pymongo[srv]
+python-dotenv
+openmeteo-requests
+requests-cache
+retry-requests
+mlflow-skinny
+dagshub
+cloudpickle
+skops

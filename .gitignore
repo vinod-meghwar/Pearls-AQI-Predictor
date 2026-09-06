@@ -1,0 +1,57 @@
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+.venv/
+venv/
+env/
+
+.cache/
+*.log
+
+models/*
+!models/.gitkeep
+mlruns/
+mlartifacts/
+
+*.csv
+*.parquet
+*.pkl
+*.joblib
+*.h5
+*.keras
+*.pt
+*.onnx
+
+.ipynb_checkpoints/
+# --- Python & Environments ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+.ipynb_checkpoints/
+
+# --- Anaconda ---
+anaconda_projects/
+
+# Ignore the entire PyCharm settings folder
+.idea/
+
+
+# Ignore diagram files (draw.io, etc)
+system_diagrams/
+
+automation_scripts/.cache.sqlite
+scripts/.cache.sqlite
+*.sqlite
+
+Project Report.docx
