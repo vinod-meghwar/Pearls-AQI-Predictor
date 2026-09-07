@@ -1,158 +1,171 @@
 # AQI Predictor
 
-This project builds and serves an air quality forecasting system for Hyderabad, Pakistan. It collects hourly weather and air-quality data from Open-Meteo, stores the raw records in MongoDB, engineers forecast features, trains a multi-output AQI model, and exposes a Streamlit dashboard that shows current AQI and a 3-day forecast.
+An end-to-end air-quality forecasting platform for Hyderabad, Pakistan. The project collects hourly environmental data, builds time-series features, trains a multi-horizon model, tracks it with MLflow, and presents the latest AQI outlook in a Streamlit dashboard.
 
-## Overview
+## What it does
 
-The system includes:
+- Collects weather and air-quality observations from Open-Meteo.
+- Stores raw observations and engineered features in MongoDB Atlas.
+- Forecasts AQI-related values for 24, 48, and 72 hours ahead.
+- Compares LightGBM and Random Forest candidates using MAE, RMSE, and R2.
+- Registers the winning model in DagsHub MLflow under the `champion` alias.
+- Displays current conditions, trends, forecasts, health guidance, and downloadable reports.
 
-- Data ingestion from Open-Meteo
-- MongoDB-backed storage for raw and engineered data
-- Feature engineering for lag, rolling, cyclical, and meteorological signals
-- Multi-output AQI forecasting for 24h, 48h, and 72h horizons
-- MLflow tracking with a DagsHub registry and champion alias
-- A Streamlit dashboard for monitoring and forecast presentation
+## Architecture
 
-## Project structure
+```text
+Open-Meteo
+	|
+	v
+MongoDB Atlas --> Feature engineering --> Model training
+	   |                                      |
+	   +--> Streamlit dashboard <------ DagsHub MLflow
+```
 
-- `app/app.py` - Streamlit dashboard for AQI monitoring and prediction
-- `scripts/data_extraction.py` - pulls hourly weather and air-quality data
-- `scripts/feature_engineering.py` - generates lag/rolling/time/weather features and targets
-- `scripts/model_train.py` - trains and registers the forecasting model in MLflow
-- `scripts/promote_model.py` - promotes the newest model version to the champion alias
-- `scripts/pipeline_runner.py` - executes the hourly and daily pipeline steps
-- `automation_scripts/hourly_data_pipeline.py` - runs the hourly data pipeline
-- `automation_scripts/daily_model_pipeline.py` - runs the daily model pipeline
-- `requirements.txt` - Python dependencies
-
-## Data source
-
-The project uses the Open-Meteo API for:
-
-- Weather: temperature, humidity, wind speed, wind direction
-- Air quality: PM2.5, PM10, CO, NO2, SO2, O3, dust
-
-The default location is Hyderabad, Pakistan:
-
-- Latitude: 25.3548
-- Longitude: 68.3585
-
-## MongoDB design
-
-The application expects a MongoDB database named `aqi_predictor` with these collections:
-
-- `raw_data` - raw hourly observations from Open-Meteo
-- `feature_store` - engineered features with target columns for training
-
-## MLflow and model registry
-
-The code uses MLflow with a DagsHub tracking URI and a registered model named:
-
-- `AQI_MultiOutput_Predictor`
-- Alias: `champion`
-
-The training script logs metrics such as:
-
-- mean absolute error (MAE)
-- root mean squared error (RMSE)
-- R-squared (R2)
-
-It chooses the strongest model between LightGBM and RandomForest and then registers the winning model.
-
-## Features used for forecasting
-
-The engineered feature set includes:
-
-- PM2.5 log transform
-- PM2.5 lag values for 1h, 2h, 3h, 6h, 12h, 24h, and 48h
-- Rolling mean and standard deviation windows
-- PM10 and NO2 lag features
-- Wind vector features from speed and direction
-- Hourly and monthly cyclic features
-- Stagnation index
-- Weekend indicator
-- Temperature and humidity change features
-- Target columns for 24h, 48h, and 72h prediction
+The default location is Hyderabad, Pakistan (`25.3548, 68.3585`).
 
 ## Dashboard
 
-The Streamlit app is in `app/app.py` and provides:
+The Streamlit app provides:
 
-- current AQI summary
-- 3-day prediction outlook
-- interactive AQI trend chart
-- health recommendations by AQI band
-- downloadable forecast report
-- model status and registry metadata
+- Current AQI status and category.
+- Three-day forecast outlook.
+- Interactive historical and forecast trend charts.
+- Health recommendations by AQI band.
+- Historical environmental insights.
+- Downloadable forecast data.
+- Live model version and registry status.
 
-To run the dashboard:
+## Data and model flow
 
-```bash
-streamlit run app/app.py
+MongoDB contains two primary collections:
+
+| Collection | Purpose |
+| --- | --- |
+| `raw_data` | Hourly weather and air-quality observations. |
+| `feature_store` | Model-ready features and 24h, 48h, and 72h targets. |
+
+The feature pipeline includes PM2.5 transformations, lag values, rolling statistics, pollutant interactions, wind vectors, cyclical time features, stagnation indicators, and weather changes.
+
+The registered model is named `AQI_MultiOutput_Predictor`. The dashboard loads the version assigned to the `champion` alias.
+
+## Project structure
+
+```text
+app/app.py                         Streamlit dashboard
+scripts/data_extraction.py        Open-Meteo ingestion
+scripts/feature_engineering.py    Feature and target generation
+scripts/model_train.py             Model training and registration
+scripts/promote_model.py           Champion alias promotion
+scripts/pipeline_runner.py         Hourly and daily pipeline runner
+automation_scripts/                Scheduled pipeline entry points
+.github/workflows/                 GitHub Actions automation
+requirements.txt                   Local and dashboard dependencies
+requirements-ci.txt                CI pipeline dependencies
 ```
 
-## Pipeline execution
+## Local setup
 
-The project includes a command-line runner for the two main pipeline groups:
+### 1. Create an environment
 
-```bash
-python scripts/pipeline_runner.py hourly
-python scripts/pipeline_runner.py daily
-```
+Python 3.12 is used by GitHub Actions. A virtual environment is recommended locally:
 
-These correspond to:
-
-- `hourly`: `data_extraction.py`, `feature_engineering.py`
-- `daily`: `model_train.py`, `promote_model.py`
-
-## Setup
-
-1. Create and activate a Python environment.
-2. Install dependencies:
-
-```bash
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-3. Set up environment variables in a `.env` file, including:
+### 2. Configure environment variables
+
+Create a `.env` file in the repository root. Never commit this file.
 
 ```env
-MONGO_URI=your_mongodb_connection_string
+MONGO_URI=mongodb+srv://USERNAME:PASSWORD@CLUSTER.mongodb.net/aqi_predictor?retryWrites=true&w=majority&authSource=admin
 DB_NAME=aqi_predictor
-MLFLOW_TRACKING_URI=your_mlflow_tracking_uri
-MLFLOW_TRACKING_USERNAME=your_dagshub_or_mlflow_username
-MLFLOW_TRACKING_PASSWORD=your_dagshub_or_mlflow_password
+MLFLOW_TRACKING_URI=https://dagshub.com/vinodsahuwani/aqi-predictor.mlflow
+MLFLOW_TRACKING_USERNAME=vinodsahuwani
+MLFLOW_TRACKING_PASSWORD=your_dagshub_access_token
 ```
 
-4. Run the data pipeline to populate MongoDB:
+`MONGO_URI` uses MongoDB Atlas credentials. `MLFLOW_TRACKING_PASSWORD` uses a DagsHub access token. They are separate credentials. URL-encode special characters in the MongoDB password before placing it in the URI.
 
-```bash
+The Atlas database user must have `readWrite` access to `aqi_predictor`. The `.env` file is excluded by `.gitignore`.
+
+### 3. Run the hourly pipeline
+
+```powershell
 python scripts/pipeline_runner.py hourly
 ```
 
-For GitHub Actions, add a repository secret named `MONGO_URI` under **Settings > Secrets and variables > Actions**. The hourly and daily workflows pass this secret to the pipeline. If the secret is missing or empty, MongoDB cannot be initialized.
+This runs data extraction followed by feature engineering.
 
-The Atlas database user in this URI must have the `readWrite` role on the `aqi_predictor` database. A user that can authenticate but only has read access will cause `user is not allowed to do action [insert] on [aqi_predictor.raw_data]` when the hourly workflow writes new observations. In Atlas, open **Database Access**, edit the user used by `MONGO_URI`, set **Database User Privileges** to `Read and write to any database` or add `readWrite` for `aqi_predictor`, then update the GitHub secret if the credentials changed. For an Atlas connection string, use `authSource=admin` when constructing the URI if it is not already present.
+### 4. Train and promote a model
 
-5. Train the model:
-
-```bash
+```powershell
 python scripts/pipeline_runner.py daily
 ```
 
-6. Launch the dashboard:
+This trains the candidate models, logs metrics and artifacts to MLflow, registers the winner, and updates the `champion` alias.
 
-```bash
+### 5. Start the dashboard
+
+```powershell
 streamlit run app/app.py
 ```
 
-## Notes
+Open `http://localhost:8501` in your browser.
 
-- The app expects a working MongoDB connection and valid MLflow registry credentials.
-- The dashboard falls back to a simple heuristic estimate if the champion model is not yet available.
-- The project is designed for AQI forecasting and monitoring rather than production-grade deployment scaffolding.
+## GitHub Actions
+
+The repository includes two scheduled workflows:
+
+| Workflow | Schedule | Purpose |
+| --- | --- | --- |
+| Hourly Data Pipeline | At 5 minutes past every hour | Collects data and updates features. |
+| Daily Model Training | Daily at midnight UTC | Trains, registers, and promotes the model. |
+
+Manual runs are available from the **Actions** tab with **Run workflow**.
+
+Add these repository secrets under **Settings > Secrets and variables > Actions**:
+
+```text
+MONGO_URI
+MLFLOW_TRACKING_USERNAME
+MLFLOW_TRACKING_PASSWORD
+MLFLOW_TRACKING_URI
+```
+
+Use the remote DagsHub MLflow URI shown above. The workflows validate required configuration before starting the pipeline.
+
+## Troubleshooting
+
+**MongoDB authentication failed**
+
+- Confirm the Atlas username and password in `MONGO_URI`.
+- Confirm the Atlas user has `readWrite` access.
+- Use `authSource=admin` in the connection string.
+- URL-encode special characters in the password.
+- Restart Streamlit after changing `.env`.
+
+**MLflow returns 403**
+
+- Confirm `MLFLOW_TRACKING_URI` points to the DagsHub repository.
+- Confirm the username is `vinodsahuwani`.
+- Replace the password with a valid DagsHub access token that can write to the repository.
+
+**The live model does not load**
+
+- Confirm that `AQI_MultiOutput_Predictor` has a `champion` alias.
+- Confirm `skops` is installed from `requirements.txt`.
+- Check network access to DagsHub and restart the dashboard.
+
+## Security
+
+Never commit MongoDB passwords, DagsHub tokens, API keys, or `.env` files. Store CI credentials only in GitHub Actions repository secrets and rotate credentials immediately if they are exposed.
 
 ## License
 
-This project does not currently include a license file in the repository.
+No license has been selected for this repository yet.
 
