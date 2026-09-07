@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import warnings
 import io
 import threading
+from urllib.parse import urlparse
 
 warnings.filterwarnings('ignore')
 
@@ -29,7 +30,36 @@ MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = os.getenv("DB_NAME", "aqi_predictor")
 RAW_COLLECTION = "raw_data"
 FEATURE_COLLECTION = "feature_store"
+MODEL_LOAD_TIMEOUT_SECONDS = int(os.getenv("MODEL_LOAD_TIMEOUT_SECONDS", "180"))
 
+
+def validate_mongo_uri(uri):
+    if not uri:
+        raise RuntimeError(
+            "MONGO_URI is not configured. Add the MongoDB Atlas connection string to the project .env file."
+        )
+
+    parsed_uri = urlparse(uri)
+    if parsed_uri.scheme not in ("mongodb", "mongodb+srv") or not parsed_uri.hostname:
+        raise RuntimeError(
+            "MONGO_URI is malformed. It must be a valid mongodb:// or mongodb+srv:// connection string."
+        )
+
+    if not parsed_uri.username or parsed_uri.password is None:
+        raise RuntimeError(
+            "MONGO_URI must include the MongoDB Atlas username and password."
+        )
+
+    return uri
+
+
+try:
+    MONGO_URI = validate_mongo_uri(MONGO_URI)
+except RuntimeError as error:
+    MONGO_URI_ERROR = str(error)
+else:
+    MONGO_URI_ERROR = None
+# MODERN CSS STYLING
 # PAGE SETTINGS
 st.set_page_config(
     page_title="AQI Forecast Dashboard",
@@ -38,146 +68,196 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# MODERN CSS STYLING
 st.markdown("""
-    <style>
-    /* Main container styling */
-    .main {
-        background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+    :root {
+        --ink: #102a43;
+        --ink-soft: #486581;
+        --canvas: #f4f7f5;
+        --paper: #ffffff;
+        --line: #d9e2ec;
+        --teal: #087f8c;
+        --teal-dark: #05616b;
+        --mint: #d9f3ee;
+        --amber: #f0b429;
+        --amber-soft: #fff3c4;
+        --shadow: 0 16px 40px rgba(16, 42, 67, 0.08);
     }
 
-    /* Dark theme support */
-    @media (prefers-color-scheme: dark) {
-        .main {
+    html, body, [class*="css"] {
+        font-family: 'DM Sans', sans-serif;
+        color: var(--ink);
+    }
+
+    .stApp {
+        background:
+            radial-gradient(circle at 88% 4%, rgba(8, 127, 140, 0.09), transparent 28rem),
+            linear-gradient(180deg, #f8fbf9 0%, var(--canvas) 48%, #eef4f2 100%);
+    }
+
+    [data-testid="stHeader"] { background: transparent; }
+    [data-testid="stToolbar"] { right: 1rem; }
+    .block-container { max-width: 1420px; padding: 2.5rem 3.5rem 4rem; }
+
+
+        background: linear-gradient(115deg, #102a43 0%, #164e63 62%, #087f8c 100%);
+        padding: 2.25rem 2.5rem;
+        border-radius: 18px;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        }
+        text-align: left;
+        margin-bottom: 2.25rem;
+        box-shadow: 0 18px 45px rgba(16, 42, 67, 0.18);
+        position: relative;
+        overflow: hidden;
     }
 
+    .main-header::after {
+        content: 'AQI / LIVE';
+        position: absolute;
+        right: 2rem;
+        top: 2rem;
+        color: rgba(255,255,255,0.7);
+        font: 600 0.72rem 'Space Grotesk', sans-serif;
+        letter-spacing: 0.12em;
     /* Header styling */
     .main-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 2rem;
-        border-radius: 15px;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(2rem, 4vw, 3.35rem);
         color: white;
+        letter-spacing: 0;
         text-align: center;
         margin-bottom: 2rem;
         box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        margin: 0.7rem 0 0;
+        font-size: 1rem;
+        color: #c8f1ec;
     }
 
-    .main-header h1 {
+    h2, h3, h4 {
+        font-family: 'Space Grotesk', sans-serif;
+        color: var(--ink);
+        letter-spacing: 0;
+    }
+
+    .stCaption, [data-testid="stCaptionContainer"] {
+        color: var(--ink-soft);
         margin: 0;
         font-size: 2.5rem;
-        font-weight: 700;
     }
-
+        color: var(--ink);
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 2.15rem !important;
     .main-header p {
         margin: 0.5rem 0 0 0;
         font-size: 1.1rem;
         opacity: 0.9;
-    }
+        color: var(--ink-soft);
+        font-size: 0.72rem !important;
 
     /* Metric cards - Equal sizing and theme support */
-    [data-testid="stMetricValue"] {
+        letter-spacing: 0.09em;
         font-size: 2rem !important;
         font-weight: 700 !important;
-    }
-
-    [data-testid="stMetricLabel"] {
-        font-size: 0.9rem !important;
-        font-weight: 600 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    [data-testid="stMetricDelta"] {
-        font-size: 0.85rem !important;
-    }
+    [data-testid="stMetricDelta"] { font-size: 0.8rem !important; }
 
     div[data-testid="metric-container"] {
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        padding: 1.5rem 1rem;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.07);
-        border-left: 4px solid #667eea;
-        transition: transform 0.2s, box-shadow 0.2s;
-        min-height: 120px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
+        background: rgba(255, 255, 255, 0.86);
+        padding: 1.35rem 1.25rem;
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(217, 226, 236, 0.9);
+        border-top: 3px solid var(--teal);
+        min-height: 122px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    [data-testid="stMetricLabel"] {
+        font-size: 0.9rem !important;
 
     /* Dark theme metric cards */
-    @media (prefers-color-scheme: dark) {
+        box-shadow: 0 20px 42px rgba(16, 42, 67, 0.13);
         div[data-testid="metric-container"] {
             background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
-    }
+        background: var(--teal);
 
     div[data-testid="metric-container"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        padding: 0.72rem 1.4rem;
+        border-radius: 10px;
     }
-
-    /* Buttons */
-    .stButton > button {
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 8px 18px rgba(8, 127, 140, 0.2);
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border: none;
-        padding: 0.75rem 2rem;
-        border-radius: 8px;
+        background: var(--teal-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 12px 24px rgba(8, 127, 140, 0.26);
         font-weight: 600;
         font-size: 1rem;
-        transition: all 0.3s;
         box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
-    }
+        gap: 0;
 
+        border-bottom: 1px solid var(--line);
     .stButton > button:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
-    }
-
-    /* Tabs */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: transparent;
-    }
+        height: 44px;
+        background: transparent;
+        border-radius: 0;
+        padding: 0 1.1rem;
+        color: var(--ink-soft);
+        font-weight: 600;
+        border-bottom: 3px solid transparent;
+        transition: color 0.2s, border-color 0.2s;
 
     .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        background-color: white;
-        border-radius: 8px;
-        padding: 0 24px;
-        font-weight: 500;
-        border: 2px solid transparent;
-        transition: all 0.2s;
-    }
 
-    /* Dark theme tabs */
+        color: var(--teal);
     @media (prefers-color-scheme: dark) {
         .stTabs [data-baseweb="tab"] {
             background-color: #2d3748;
-            color: #e2e8f0;
-        }
+        background: transparent;
+        border-bottom-color: var(--teal);
+        color: var(--teal) !important;
     }
 
-    .stTabs [data-baseweb="tab"]:hover {
         border-color: #667eea;
-    }
-
-    .stTabs [aria-selected="true"] {
+        background: var(--paper);
+        padding: 1.25rem 1.5rem;
+        border-radius: 14px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white !important;
+        box-shadow: var(--shadow);
+        border-top: 1px solid rgba(217, 226, 236, 0.8);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+
+    [data-testid="stSidebar"] {
+        background: #102a43;
+        border-right: 1px solid rgba(255,255,255,0.08);
     }
 
-    /* Alert boxes */
-    .alert-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 12px;
-        border-left: 5px solid;
-        margin: 1rem 0;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] [data-testid="stCaptionContainer"] { color: #d9f3ee !important; }
+
+    [data-testid="stSidebar"] [data-testid="stAlert"] {
+        background: rgba(255,255,255,0.09);
+        border: 1px solid rgba(217,243,238,0.18);
+    }
+
+    [data-testid="stSidebar"] hr { border-color: rgba(217,243,238,0.16); }
+
+    @media (max-width: 760px) {
+        .block-container { padding: 1.25rem 1rem 3rem; }
+        .main-header { padding: 1.6rem; }
+        .main-header::after { display: none; }
+        .main-header h1 { font-size: 2rem; }
+    }
     }
 
     /* Dark theme alert cards */
@@ -211,7 +291,7 @@ st.markdown("""
         transform: translateY(-2px);
         box-shadow: 0 6px 12px rgba(16, 185, 129, 0.4);
     }
-    </style>
+</style>
 """, unsafe_allow_html=True)
 
 
@@ -242,10 +322,13 @@ def load_champion_model():
     # Give the registry/artifact fetch enough time to complete over DagsHub.
     thread = threading.Thread(target=_load_model, daemon=True)
     thread.start()
-    thread.join(timeout=60)
+    thread.join(timeout=MODEL_LOAD_TIMEOUT_SECONDS)
 
     if thread.is_alive():
-        result["error"] = "Model loading timed out after 60 seconds while fetching the champion artifact from MLflow."
+        result["error"] = (
+            f"Model loading timed out after {MODEL_LOAD_TIMEOUT_SECONDS} seconds "
+            "while fetching the champion artifact from MLflow."
+        )
     
     return result["model"], result["version"], result["error"]
 
@@ -297,7 +380,7 @@ def get_aqi_info(aqi_val):
     if aqi_val <= 50:
         return ("Good", "#00e400", "Air quality is satisfactory. Ideal for all outdoor activities!")
     elif aqi_val <= 100:
-        return ("Moderate", "#ffff00",
+        return ("Moderate", "#9a6700",
                 "Air quality is acceptable. Sensitive groups should limit prolonged outdoor exertion.")
     elif aqi_val <= 150:
         return ("Unhealthy for Sensitive Groups", "#ff7e00",
@@ -685,7 +768,6 @@ def main():
         st.markdown("""
         This dashboard provides:
         - **Real-time** air quality monitoring
-        - **AI-powered** 3-day forecasts
         - **Interactive** Plotly visualizations
         - **Auto-update** model detection
         - **Health recommendations** based on AQI levels
@@ -705,8 +787,12 @@ def main():
 
         with st.spinner("Fetching data from MongoDB..."):
             try:
+                if MONGO_URI_ERROR:
+                    raise RuntimeError(MONGO_URI_ERROR)
+
                 # Connect to MongoDB
                 client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+                client.admin.command("ping")
                 db = client[DB_NAME]
 
                 # Fetch historical data (7 days)
@@ -731,7 +817,14 @@ def main():
                 client.close()
 
             except Exception as e:
-                st.error(f"Database Error: {str(e)}")
+                error_message = str(e)
+                if "bad auth" in error_message.lower() or "authentication failed" in error_message.lower():
+                    st.error(
+                        "MongoDB authentication failed. Check the Atlas username and password in .env. "
+                        "URL-encode special password characters and add authSource=admin to the URI."
+                    )
+                else:
+                    st.error(f"Database Error: {error_message}")
                 st.stop()
 
         with st.spinner("Running prediction model..."):

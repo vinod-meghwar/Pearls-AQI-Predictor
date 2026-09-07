@@ -30,14 +30,34 @@ def validate_mongo_uri(uri: str | None) -> str:
     return uri
 
 
+def validate_mlflow_uri(uri: str | None) -> str:
+    if not uri:
+        raise RuntimeError(
+            "MLFLOW_TRACKING_URI is not set. Configure the GitHub Actions secret or local .env value."
+        )
+    if uri.startswith(("file:", "./", "/")):
+        raise RuntimeError(
+            "MLFLOW_TRACKING_URI points to a filesystem backend. Configure a remote MLflow/DagsHub URI."
+        )
+    return uri
+
+
 MONGO_URI = validate_mongo_uri(os.getenv("MONGO_URI"))
 DB_NAME = os.getenv("DB_NAME", "aqi_predictor")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "feature_store")
 
 # DAGSHUB / MLFLOW SETUP
-os.environ["MLFLOW_TRACKING_USERNAME"] = os.getenv("MLFLOW_TRACKING_USERNAME")
-os.environ["MLFLOW_TRACKING_PASSWORD"] = os.getenv("MLFLOW_TRACKING_PASSWORD")
-os.environ["MLFLOW_TRACKING_URI"] = os.getenv("MLFLOW_TRACKING_URI")
+MLFLOW_TRACKING_URI = validate_mlflow_uri(os.getenv("MLFLOW_TRACKING_URI"))
+MLFLOW_TRACKING_USERNAME = os.getenv("MLFLOW_TRACKING_USERNAME", "")
+MLFLOW_TRACKING_PASSWORD = os.getenv("MLFLOW_TRACKING_PASSWORD", "")
+if not MLFLOW_TRACKING_USERNAME or not MLFLOW_TRACKING_PASSWORD:
+    raise RuntimeError(
+        "MLflow credentials are missing. Set MLFLOW_TRACKING_USERNAME and "
+        "MLFLOW_TRACKING_PASSWORD to a DagsHub username and access token."
+    )
+os.environ["MLFLOW_TRACKING_USERNAME"] = MLFLOW_TRACKING_USERNAME
+os.environ["MLFLOW_TRACKING_PASSWORD"] = MLFLOW_TRACKING_PASSWORD
+os.environ["MLFLOW_TRACKING_URI"] = MLFLOW_TRACKING_URI
 
 def load_data():
     print("Connecting to MongoDB Feature Store...")
@@ -132,7 +152,7 @@ def avg_metric(metrics, metric_name):
 # MAIN EXECUTION
 def main():
     # 1. Point MLflow to the DagsHub URI
-    mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment("AQI-Prediction-Training")
 
     # Load and Split

@@ -132,6 +132,8 @@ python scripts/pipeline_runner.py hourly
 
 For GitHub Actions, add a repository secret named `MONGO_URI` under **Settings > Secrets and variables > Actions**. The hourly and daily workflows pass this secret to the pipeline. If the secret is missing or empty, MongoDB cannot be initialized.
 
+The Atlas database user in this URI must have the `readWrite` role on the `aqi_predictor` database. A user that can authenticate but only has read access will cause `user is not allowed to do action [insert] on [aqi_predictor.raw_data]` when the hourly workflow writes new observations. In Atlas, open **Database Access**, edit the user used by `MONGO_URI`, set **Database User Privileges** to `Read and write to any database` or add `readWrite` for `aqi_predictor`, then update the GitHub secret if the credentials changed. For an Atlas connection string, use `authSource=admin` when constructing the URI if it is not already present.
+
 5. Train the model:
 
 ```bash

@@ -8,16 +8,32 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # CONFIGURATION
-os.environ["MLFLOW_TRACKING_USERNAME"] = os.getenv("MLFLOW_TRACKING_USERNAME")
-os.environ["MLFLOW_TRACKING_PASSWORD"] = os.getenv("MLFLOW_TRACKING_PASSWORD")
-os.environ["MLFLOW_TRACKING_URI"] = os.getenv("MLFLOW_TRACKING_URI")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
+if not MLFLOW_TRACKING_URI:
+    raise RuntimeError(
+        "MLFLOW_TRACKING_URI is not set. Configure the GitHub Actions secret or local .env value."
+    )
+if MLFLOW_TRACKING_URI.startswith(("file:", "./", "/")):
+    raise RuntimeError(
+        "MLFLOW_TRACKING_URI points to a filesystem backend. Configure a remote MLflow/DagsHub URI."
+    )
+MLFLOW_TRACKING_USERNAME = os.getenv("MLFLOW_TRACKING_USERNAME", "")
+MLFLOW_TRACKING_PASSWORD = os.getenv("MLFLOW_TRACKING_PASSWORD", "")
+if not MLFLOW_TRACKING_USERNAME or not MLFLOW_TRACKING_PASSWORD:
+    raise RuntimeError(
+        "MLflow credentials are missing. Set MLFLOW_TRACKING_USERNAME and "
+        "MLFLOW_TRACKING_PASSWORD to a DagsHub username and access token."
+    )
+os.environ["MLFLOW_TRACKING_USERNAME"] = MLFLOW_TRACKING_USERNAME
+os.environ["MLFLOW_TRACKING_PASSWORD"] = MLFLOW_TRACKING_PASSWORD
+os.environ["MLFLOW_TRACKING_URI"] = MLFLOW_TRACKING_URI
 MODEL_NAME = "AQI_MultiOutput_Predictor"
 ALIAS = "champion"  # This replaces the "Production" stage
 
 
 def promote_model():
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     client = MlflowClient()
-    mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
 
     # 1. Get ALL versions to find the absolute newest
     all_versions = client.search_model_versions(f"name='{MODEL_NAME}'")
