@@ -17,11 +17,20 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 load_dotenv()
 
 # CONFIGURATION
-MONGO_URI = os.getenv("MONGO_URI")
-if not MONGO_URI:
-    raise RuntimeError(
-        "MONGO_URI is not set. Add it to .env locally or configure the GitHub Actions secret."
-    )
+
+def validate_mongo_uri(uri: str | None) -> str:
+    if not uri:
+        raise RuntimeError(
+            "MONGO_URI is not set. Add it to .env locally or configure the GitHub Actions secret."
+        )
+    if not uri.startswith(("mongodb://", "mongodb+srv://")):
+        raise RuntimeError(
+            "MONGO_URI is malformed. It must begin with 'mongodb://' or 'mongodb+srv://'."
+        )
+    return uri
+
+
+MONGO_URI = validate_mongo_uri(os.getenv("MONGO_URI"))
 DB_NAME = os.getenv("DB_NAME", "aqi_predictor")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "feature_store")
 

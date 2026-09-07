@@ -9,12 +9,21 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def validate_mongo_uri(uri: str | None) -> str:
+    if not uri:
+        raise RuntimeError(
+            "MONGO_URI is not set. Add it to .env locally or configure the GitHub Actions secret."
+        )
+    if not uri.startswith(("mongodb://", "mongodb+srv://")):
+        raise RuntimeError(
+            "MONGO_URI is malformed. It must begin with 'mongodb://' or 'mongodb+srv://'."
+        )
+    return uri
+
+
 # 1. SETUP
-MONGO_URI = os.getenv("MONGO_URI")
-if not MONGO_URI:
-    raise RuntimeError(
-        "MONGO_URI is not set. Add it to .env locally or configure the GitHub Actions secret."
-    )
+MONGO_URI = validate_mongo_uri(os.getenv("MONGO_URI"))
 client = MongoClient(MONGO_URI)
 db = client["aqi_predictor"]
 raw_collection = db["raw_data"]

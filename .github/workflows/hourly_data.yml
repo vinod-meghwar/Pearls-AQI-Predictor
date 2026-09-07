@@ -28,5 +28,15 @@ jobs:
           MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
           MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
           MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
-        run: python -m scripts.pipeline_runner hourly
+        run: |
+          python - <<'PY'
+          import os
+          uri = os.getenv('MONGO_URI')
+          if not uri:
+              raise SystemExit('ERROR: MONGO_URI is missing. Add the GitHub repository secret MONGO_URI.')
+          if not uri.startswith(('mongodb://', 'mongodb+srv://')):
+              raise SystemExit("ERROR: MONGO_URI is malformed. It must start with 'mongodb://' or 'mongodb+srv://'.")
+          print('MONGO_URI is configured and has a valid MongoDB scheme.')
+          PY
+          python -m scripts.pipeline_runner hourly
 
