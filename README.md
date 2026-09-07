@@ -53,8 +53,8 @@ The registered model is named `AQI_MultiOutput_Predictor`. The dashboard loads t
 
 ```text
 app/app.py                         Streamlit dashboard
-scripts/data_extraction.py        Open-Meteo ingestion
-scripts/feature_engineering.py    Feature and target generation
+scripts/data_extraction.py         Open-Meteo ingestion
+scripts/feature_engineering.py     Feature and target generation
 scripts/model_train.py             Model training and registration
 scripts/promote_model.py           Champion alias promotion
 scripts/pipeline_runner.py         Hourly and daily pipeline runner
