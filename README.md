@@ -36,6 +36,16 @@ The Streamlit app provides:
 - Downloadable forecast data.
 - Live model version and registry status.
 
+### Dashboard Preview
+
+![Dashboard overview](assets/dashboard-overview.png)
+
+![AQI trend](assets/aqi-trend.png)
+
+![Data insights](assets/data-insights.png)
+
+![Environmental overview](assets/environmental-overview.png)
+
 ## Data and model flow
 
 MongoDB contains two primary collections:
