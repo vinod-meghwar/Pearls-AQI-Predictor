@@ -84,8 +84,8 @@ Create a `.env` file in the repository root. Never commit this file.
 ```env
 MONGO_URI=mongodb+srv://USERNAME:PASSWORD@CLUSTER.mongodb.net/aqi_predictor?retryWrites=true&w=majority&authSource=admin
 DB_NAME=aqi_predictor
-MLFLOW_TRACKING_URI=https://dagshub.com/vinodsahuwani/aqi-predictor.mlflow
-MLFLOW_TRACKING_USERNAME=vinodsahuwani
+MLFLOW_TRACKING_URI=https://dagshub.com/your-dagshub-username/your-repository.mlflow
+MLFLOW_TRACKING_USERNAME=your-dagshub-username
 MLFLOW_TRACKING_PASSWORD=your_dagshub_access_token
 ```
 
@@ -152,7 +152,7 @@ Use the remote DagsHub MLflow URI shown above. The workflows validate required c
 **MLflow returns 403**
 
 - Confirm `MLFLOW_TRACKING_URI` points to the DagsHub repository.
-- Confirm the username is `vinodsahuwani`.
+- Confirm the username matches the DagsHub account that owns or can write to the repository.
 - Replace the password with a valid DagsHub access token that can write to the repository.
 
 **The live model does not load**
