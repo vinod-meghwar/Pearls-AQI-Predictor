@@ -82,8 +82,8 @@ pip install -r requirements.txt
 Create a `.env` file in the repository root. Never commit this file.
 
 ```env
-MONGO_URI=mongodb+srv://USERNAME:PASSWORD@CLUSTER.mongodb.net/aqi_predictor?retryWrites=true&w=majority&authSource=admin
-DB_NAME=aqi_predictor
+MONGO_URI=mongodb+srv://USERNAME:PASSWORD@CLUSTER.mongodb.net/YOUR_DATABASE_NAME?retryWrites=true&w=majority&authSource=admin
+DB_NAME=YOUR_DATABASE_NAME
 MLFLOW_TRACKING_URI=https://dagshub.com/your-dagshub-username/your-repository.mlflow
 MLFLOW_TRACKING_USERNAME=your-dagshub-username
 MLFLOW_TRACKING_PASSWORD=your_dagshub_access_token
@@ -91,7 +91,7 @@ MLFLOW_TRACKING_PASSWORD=your_dagshub_access_token
 
 `MONGO_URI` uses MongoDB Atlas credentials. `MLFLOW_TRACKING_PASSWORD` uses a DagsHub access token. They are separate credentials. URL-encode special characters in the MongoDB password before placing it in the URI.
 
-The Atlas database user must have `readWrite` access to `aqi_predictor`. The `.env` file is excluded by `.gitignore`.
+Replace `YOUR_DATABASE_NAME` with any database name you choose. Use the same name in both `MONGO_URI` and `DB_NAME`. The Atlas database user must have `readWrite` access to that database. The `.env` file is excluded by `.gitignore`.
 
 ### 3. Run the hourly pipeline
 
