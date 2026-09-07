@@ -130,6 +130,8 @@ MLFLOW_TRACKING_PASSWORD=your_dagshub_or_mlflow_password
 python scripts/pipeline_runner.py hourly
 ```
 
+For GitHub Actions, add a repository secret named `MONGO_URI` under **Settings > Secrets and variables > Actions**. The hourly and daily workflows pass this secret to the pipeline. If the secret is missing or empty, MongoDB cannot be initialized.
+
 5. Train the model:
 
 ```bash

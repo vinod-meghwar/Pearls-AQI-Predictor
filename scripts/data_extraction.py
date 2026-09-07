@@ -11,6 +11,10 @@ load_dotenv()
 
 # 1. SETUP
 MONGO_URI = os.getenv("MONGO_URI")
+if not MONGO_URI:
+    raise RuntimeError(
+        "MONGO_URI is not set. Add it to .env locally or configure the GitHub Actions secret."
+    )
 client = MongoClient(MONGO_URI)
 db = client["aqi_predictor"]
 raw_collection = db["raw_data"]

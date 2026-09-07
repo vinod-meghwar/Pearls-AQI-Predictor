@@ -18,6 +18,10 @@ load_dotenv()
 
 # CONFIGURATION
 MONGO_URI = os.getenv("MONGO_URI")
+if not MONGO_URI:
+    raise RuntimeError(
+        "MONGO_URI is not set. Add it to .env locally or configure the GitHub Actions secret."
+    )
 DB_NAME = os.getenv("DB_NAME", "aqi_predictor")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "feature_store")
 
