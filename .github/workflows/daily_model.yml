@@ -36,9 +36,9 @@ jobs:
               raise SystemExit('ERROR: MLFLOW_TRACKING_URI is missing. Add the GitHub repository secret MLFLOW_TRACKING_URI.')
           if uri.startswith(('file:', './', '/')):
               raise SystemExit('ERROR: MLFLOW_TRACKING_URI must point to a remote MLflow/DagsHub server, not a filesystem path.')
-            if 'dagshub.com/vinodsahuwani/aqi-predictor.mlflow' not in uri:
+          if 'dagshub.com/vinodsahuwani/aqi-predictor.mlflow' not in uri:
               raise SystemExit('ERROR: MLFLOW_TRACKING_URI must be https://dagshub.com/vinodsahuwani/aqi-predictor.mlflow')
-            if not os.getenv('MLFLOW_TRACKING_USERNAME') or not os.getenv('MLFLOW_TRACKING_PASSWORD'):
+          if not os.getenv('MLFLOW_TRACKING_USERNAME') or not os.getenv('MLFLOW_TRACKING_PASSWORD'):
               raise SystemExit('ERROR: MLFLOW_TRACKING_USERNAME and MLFLOW_TRACKING_PASSWORD are required.')
           print('MLFLOW_TRACKING_URI is configured for a remote tracking backend.')
           PY
