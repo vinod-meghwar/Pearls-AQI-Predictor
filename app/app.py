@@ -1,4 +1,5 @@
 import os
+import pickle
 import streamlit as st
 import mlflow
 import pandas as pd
@@ -11,6 +12,7 @@ from dotenv import load_dotenv
 import warnings
 import io
 import threading
+from pathlib import Path
 from urllib.parse import urlparse
 
 warnings.filterwarnings('ignore')
@@ -30,7 +32,7 @@ MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = os.getenv("DB_NAME", "aqi_predictor")
 RAW_COLLECTION = "raw_data"
 FEATURE_COLLECTION = "feature_store"
-MODEL_LOAD_TIMEOUT_SECONDS = int(os.getenv("MODEL_LOAD_TIMEOUT_SECONDS", "180"))
+MODEL_LOAD_TIMEOUT_SECONDS = int(os.getenv("MODEL_LOAD_TIMEOUT_SECONDS", "0"))
 
 
 def validate_mongo_uri(uri):
@@ -297,10 +299,25 @@ st.markdown("""
 
 # CACHED MODEL LOADING WITH AUTO-UPDATE
 @st.cache_resource(show_spinner=False)
+def load_local_fallback_model():
+    """Loads the local pickled model if the remote MLflow model is unavailable."""
+    model_path = Path(__file__).resolve().parents[1] / "models" / "aqi_multi_output_model.pkl"
+    if not model_path.exists():
+        return None, "local-model-missing"
+
+    try:
+        with open(model_path, "rb") as f:
+            model = pickle.load(f)
+        return model, "local"
+    except Exception:
+        return None, "local-load-failed"
+
+
+@st.cache_resource(show_spinner=False)
 def load_champion_model():
-    """Loads the model from MLflow Registry with error handling and timeout."""
+    """Loads the model from MLflow Registry with a local fallback for reliability."""
     result = {"model": None, "version": None, "error": "Timeout loading model"}
-    
+
     def _load_model():
         try:
             if not os.environ.get("MLFLOW_TRACKING_URI"):
@@ -317,19 +334,35 @@ def load_champion_model():
             result["version"] = model_ver.version
             result["error"] = None
         except Exception as e:
-            result["error"] = str(e)
-    
-    # Give the registry/artifact fetch enough time to complete over DagsHub.
+            local_model, local_status = load_local_fallback_model()
+            if local_model is not None:
+                result["model"] = local_model
+                result["version"] = local_status
+                result["error"] = None
+            else:
+                result["error"] = str(e)
+
     thread = threading.Thread(target=_load_model, daemon=True)
     thread.start()
-    thread.join(timeout=MODEL_LOAD_TIMEOUT_SECONDS)
 
-    if thread.is_alive():
-        result["error"] = (
-            f"Model loading timed out after {MODEL_LOAD_TIMEOUT_SECONDS} seconds "
-            "while fetching the champion artifact from MLflow."
-        )
-    
+    if MODEL_LOAD_TIMEOUT_SECONDS > 0:
+        thread.join(timeout=MODEL_LOAD_TIMEOUT_SECONDS)
+
+    if MODEL_LOAD_TIMEOUT_SECONDS <= 0:
+        thread.join()
+
+    if thread.is_alive() and MODEL_LOAD_TIMEOUT_SECONDS > 0:
+        local_model, local_status = load_local_fallback_model()
+        if local_model is not None:
+            result["model"] = local_model
+            result["version"] = local_status
+            result["error"] = None
+        else:
+            result["error"] = (
+                f"Model loading timed out after {MODEL_LOAD_TIMEOUT_SECONDS} seconds "
+                "while fetching the champion artifact from MLflow."
+            )
+
     return result["model"], result["version"], result["error"]
 
 
@@ -776,8 +809,6 @@ def main():
         """)
 
         st.markdown("---")
-        st.caption("Developed by Shehraz Sarwar khan")
-        st.caption("(a.k.a Data Scientist)")
 
     # Main content
     st.markdown("### Latest Air Quality Analysis")
