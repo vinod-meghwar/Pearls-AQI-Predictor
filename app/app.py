@@ -315,7 +315,11 @@ def load_local_fallback_model():
 
 @st.cache_resource(show_spinner=False)
 def load_champion_model():
-    """Loads the model from MLflow Registry with a local fallback for reliability."""
+    """Loads the local trained model first for instant startup, with remote MLflow as fallback."""
+    local_model, local_status = load_local_fallback_model()
+    if local_model is not None:
+        return local_model, local_status, None
+
     result = {"model": None, "version": None, "error": "Timeout loading model"}
 
     def _load_model():
@@ -334,34 +338,21 @@ def load_champion_model():
             result["version"] = model_ver.version
             result["error"] = None
         except Exception as e:
-            local_model, local_status = load_local_fallback_model()
-            if local_model is not None:
-                result["model"] = local_model
-                result["version"] = local_status
-                result["error"] = None
-            else:
-                result["error"] = str(e)
+            result["error"] = str(e)
 
     thread = threading.Thread(target=_load_model, daemon=True)
     thread.start()
 
     if MODEL_LOAD_TIMEOUT_SECONDS > 0:
         thread.join(timeout=MODEL_LOAD_TIMEOUT_SECONDS)
-
-    if MODEL_LOAD_TIMEOUT_SECONDS <= 0:
+    else:
         thread.join()
 
     if thread.is_alive() and MODEL_LOAD_TIMEOUT_SECONDS > 0:
-        local_model, local_status = load_local_fallback_model()
-        if local_model is not None:
-            result["model"] = local_model
-            result["version"] = local_status
-            result["error"] = None
-        else:
-            result["error"] = (
-                f"Model loading timed out after {MODEL_LOAD_TIMEOUT_SECONDS} seconds "
-                "while fetching the champion artifact from MLflow."
-            )
+        result["error"] = (
+            f"Model loading timed out after {MODEL_LOAD_TIMEOUT_SECONDS} seconds "
+            "while fetching the champion artifact from MLflow."
+        )
 
     return result["model"], result["version"], result["error"]
 
