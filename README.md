@@ -8,7 +8,7 @@ The system ingests hourly weather and air-quality data, engineers time-series fe
 ![Streamlit](https://img.shields.io/badge/Dashboard-Streamlit-FF4B4B)
 ![MLflow](https://img.shields.io/badge/Tracking-MLflow-0194E2)
 ![MongoDB](https://img.shields.io/badge/Database-MongoDB%20Atlas-47A248)
-![License](https://img.shields.io/badge/License-Unspecified-lightgrey)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
 
@@ -231,7 +231,7 @@ Never commit MongoDB passwords, DagsHub tokens, API keys, or `.env` files. Store
 
 ## License
 
-No license has been selected for this repository yet.
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
