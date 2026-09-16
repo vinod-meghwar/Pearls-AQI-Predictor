@@ -2,7 +2,7 @@
 
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://pearls-aqi-predictor-app.streamlit.app/)
 
-**Live demo:** [pearls-aqi-predictor-app.streamlit.app](https://pearls-aqi-predictor-app.streamlit.app/)
+**Live:** [pearls-aqi-predictor-app.streamlit.app](https://pearls-aqi-predictor-app.streamlit.app/)
 
 An end-to-end air-quality forecasting platform for Hyderabad, Pakistan. The project collects hourly environmental data, builds time-series features, trains a multi-horizon model, tracks it with MLflow, and presents the latest AQI outlook in a Streamlit dashboard.
 
